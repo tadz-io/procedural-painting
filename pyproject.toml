@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "procedural-painting"
+version = "0.1.0"
+description = "repository with experimental code for procedural painting using Python"
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+pillow = "^10.4.0"
+matplotlib = "^3.9.2"
+ipykernel = "^6.29.5"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
