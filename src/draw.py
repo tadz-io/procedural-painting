@@ -15,7 +15,7 @@ class Canvas:
         self.clear()
         self._cache = self._canvas
         # instatiate Drawer class
-        self.draw = self.Drawer(self)
+        self.draw = Drawer(self)
 
     @property
     def canvas(self):
@@ -25,37 +25,38 @@ class Canvas:
         """Create a blank canvas with the specified background color"""
         self._canvas = np.ones(self.resolution + (3,), np.uint8) * np.array(self.bg_color, np.uint8)
 
-    class Drawer:
-        def __init__(self, parent: "Canvas") -> None:
-            self.parent = parent
 
-        def _cache_canvas_state(method: Callable) -> Callable:
-            """decorator to cache the state of the canvas before drawing"""
+class Drawer:
+    def __init__(self, parent: "Canvas") -> None:
+        self.parent = parent
 
-            def wrapper(self, *args, **kwargs):
-                # save curreng state of canvas to _cache before drawing
-                self.parent._cache = self.parent._canvas.copy()
-                return method(self, *args, **kwargs)
+    def _cache_canvas_state(method: Callable) -> Callable:
+        """decorator to cache the state of the canvas before drawing"""
 
-            return wrapper
+        def wrapper(self, *args, **kwargs):
+            # save curreng state of canvas to _cache before drawing
+            self.parent._cache = self.parent._canvas.copy()
+            return method(self, *args, **kwargs)
 
-        @_cache_canvas_state
-        def line(self, pt1, pt2, color=(255, 255, 255), thickness=-1):
-            # Draw a line on the parent canvas
-            cv.line(self.parent._canvas, pt1, pt2, color, thickness)
+        return wrapper
 
-        @_cache_canvas_state
-        def rectangle(self, pt1, pt2, color=(0, 0, 0), thickness=-1):
-            # Draw a rectangle on the parent canvas
-            cv.rectangle(self.parent._canvas, pt1, pt2, color, thickness)
+    @_cache_canvas_state
+    def line(self, pt1, pt2, color=(255, 255, 255), thickness=-1):
+        # Draw a line on the parent canvas
+        cv.line(self.parent._canvas, pt1, pt2, color, thickness)
 
-        @_cache_canvas_state
-        def circle(self, center, radius, color=(0, 0, 0), thickness=-1):
-            # Draw a circle on the parent canvas
-            cv.circle(
-                self.parent._canvas,
-                center,
-                radius,
-                color,
-                thickness,
-            )
+    @_cache_canvas_state
+    def rectangle(self, pt1, pt2, color=(0, 0, 0), thickness=-1):
+        # Draw a rectangle on the parent canvas
+        cv.rectangle(self.parent._canvas, pt1, pt2, color, thickness)
+
+    @_cache_canvas_state
+    def circle(self, center, radius, color=(0, 0, 0), thickness=-1):
+        # Draw a circle on the parent canvas
+        cv.circle(
+            self.parent._canvas,
+            center,
+            radius,
+            color,
+            thickness,
+        )
