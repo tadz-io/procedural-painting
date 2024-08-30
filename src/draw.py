@@ -1,34 +1,61 @@
-from PIL import Image, ImageDraw
+import cv2 as cv  # noqa
 import numpy as np
+from typing import Callable
+
+# load reference image to optimize against
+# reference_image = Image.open("src/img/example_001.png").convert("RGB")
 
 
 class Canvas:
-    def __init__(self, n_strokes, resolution=(800, 600), bg_color=(255, 255, 255)) -> None:
-        self.n_strokes = n_strokes
+    def __init__(self, resolution=(800, 600), bg_color=(255, 255, 255)) -> None:
         self.resolution = resolution
         self.bg_color = bg_color
         self._canvas = None
-        self._draw = None
+        # setup blank canvas
         self.clear()
+        self._cache = self._canvas
+        # instatiate Drawer class
+        self.draw = self.Drawer(self)
 
     @property
     def canvas(self):
         return self._canvas
 
     def clear(self):
-        # draw = ImageDraw.Draw(image)
-        self._canvas = Image.new("RGB", self.resolution, self.bg_color)
-        self._draw = ImageDraw.Draw(self.canvas)
+        """Create a blank canvas with the specified background color"""
+        self._canvas = np.ones(self.resolution + (3,), np.uint8) * np.array(self.bg_color, np.uint8)
 
-    def draw_points(self, radius=5):
-        """Draw random points (circles) on the canvas with a specified radius."""
-        for _ in range(100):
-            x = np.random.randint(0, self.resolution[0])
-            y = np.random.randint(0, self.resolution[1])
+    class Drawer:
+        def __init__(self, parent: "Canvas") -> None:
+            self.parent = parent
 
-            # Calculate the bounding box for the circle
-            upper_left = (x - radius, y - radius)
-            lower_right = (x + radius, y + radius)
+        def _cache_canvas_state(method: Callable) -> Callable:
+            """decorator to cache the state of the canvas before drawing"""
 
-            # Draw the circle
-            self._draw.ellipse([upper_left, lower_right], fill=(0, 0, 0))
+            def wrapper(self, *args, **kwargs):
+                # save curreng state of canvas to _cache before drawing
+                self.parent._cache = self.parent._canvas.copy()
+                return method(self, *args, **kwargs)
+
+            return wrapper
+
+        @_cache_canvas_state
+        def line(self, pt1, pt2, color=(255, 255, 255), thickness=-1):
+            # Draw a line on the parent canvas
+            cv.line(self.parent._canvas, pt1, pt2, color, thickness)
+
+        @_cache_canvas_state
+        def rectangle(self, pt1, pt2, color=(0, 0, 0), thickness=-1):
+            # Draw a rectangle on the parent canvas
+            cv.rectangle(self.parent._canvas, pt1, pt2, color, thickness)
+
+        @_cache_canvas_state
+        def circle(self, center, radius, color=(0, 0, 0), thickness=-1):
+            # Draw a circle on the parent canvas
+            cv.circle(
+                self.parent._canvas,
+                center,
+                radius,
+                color,
+                thickness,
+            )
