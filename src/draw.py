@@ -1,5 +1,6 @@
 import cv2 as cv  # noqa
 import numpy as np
+from numpy.typing import NDArray
 from typing import Callable
 
 # load reference image to optimize against
@@ -7,13 +8,13 @@ from typing import Callable
 
 
 class Canvas:
-    def __init__(self, resolution=(800, 600), bg_color=(255, 255, 255)) -> None:
+    def __init__(self, resolution=(600, 800), bg_color=(255, 255, 255)) -> None:
         self.resolution = resolution
         self.bg_color = bg_color
-        self._canvas = None
+        self._canvas: NDArray | None = None
         # setup blank canvas
         self.clear()
-        self._cache = self._canvas
+        self._cache: NDArray = self._canvas
         # instatiate Drawer class
         self.draw = Drawer(self)
 
@@ -24,6 +25,10 @@ class Canvas:
     def clear(self):
         """Create a blank canvas with the specified background color"""
         self._canvas = np.ones(self.resolution + (3,), np.uint8) * np.array(self.bg_color, np.uint8)
+
+    def revert(self):
+        """revert canvas to the cache state"""
+        self._canvas = self._cache.copy()
 
 
 class Drawer:
