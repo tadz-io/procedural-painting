@@ -8,40 +8,70 @@ from typing import Callable
 
 
 class Canvas:
-    def __init__(self, resolution=(600, 800), bg_color=(255, 255, 255)) -> None:
+    def __init__(self, resolution=(600, 800), bg_color=(255, 255, 255), cache_size=5000) -> None:
         self.resolution = resolution
         self.bg_color = bg_color
+        self._cache_size = cache_size
         self._canvas: NDArray | None = None
         # setup blank canvas
-        self.clear()
-        self._cache: NDArray = self._canvas
+        self._state_history: NDArray = np.empty((cache_size, *resolution, 3), dtype=np.uint8)
+        self._history_index = 0  # track current position in history
+        self._history_count = 0  # track number of stored states
         # instatiate Drawer class
         self.draw = Drawer(self)
+        self.clear()
 
     @property
     def canvas(self):
         return self._canvas
 
+    @property
+    def history(self):
+        return self._state_history[: self._history_count, ...]
+
+    @property
+    def previous_state(self):
+        if self._history_count > 0:
+            return self._state_history[self._history_index - 1]
+        else:
+            print("no previous state")
+
     def clear(self):
         """Create a blank canvas with the specified background color"""
         self._canvas = np.ones(self.resolution + (3,), np.uint8) * np.array(self.bg_color, np.uint8)
+        self._save_current_state()
 
     def revert(self):
         """revert canvas to the cache state"""
-        self._canvas = self._cache.copy()
+        if self._history_count > 0:
+            self._history_index = (self._history_index - 1) % self._cache_size
+            self._history_count -= 1
+            self._canvas = self._state_history[self._history_index].copy()
+        else:
+            print("no previous state to revert to")
+
+    def _save_current_state(self):
+        """Save the current state of the canvas in history"""
+        self._state_history[self._history_index] = self._canvas.copy()
+        # increaste counter
+        self._history_index = (self._history_index + 1) % self._cache_size
+        if self._history_count < self._cache_size:
+            self._history_count += 1
 
 
 class Drawer:
-    def __init__(self, parent: "Canvas") -> None:
-        self.parent = parent
+    def __init__(self, parent: Canvas) -> None:
+        self.parent: Canvas = parent
 
     def _cache_canvas_state(method: Callable) -> Callable:
         """decorator to cache the state of the canvas before drawing"""
 
         def wrapper(self, *args, **kwargs):
             # save curreng state of canvas to _cache before drawing
-            self.parent._cache = self.parent._canvas.copy()
-            return method(self, *args, **kwargs)
+            result = method(self, *args, **kwargs)
+            self.parent._save_current_state()
+
+            return result
 
         return wrapper
 
