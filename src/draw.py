@@ -1,10 +1,7 @@
 import cv2 as cv  # noqa
 import numpy as np
 from numpy.typing import NDArray
-from typing import Callable
-
-# load reference image to optimize against
-# reference_image = Image.open("src/img/example_001.png").convert("RGB")
+from typing import Callable, Any, Optional
 
 
 class Canvas:
@@ -12,86 +9,82 @@ class Canvas:
         self.resolution = resolution
         self.bg_color = bg_color
         self._cache_size = cache_size
-        self._canvas: NDArray | None = None
-        # setup blank canvas
+        self._canvas: NDArray = np.ones(self.resolution + (3,), dtype=np.uint8) * np.array(
+            self.bg_color, np.uint8
+        )
+        # Setup blank canvas
         self._state_history: NDArray = np.empty((cache_size, *resolution, 3), dtype=np.uint8)
-        self._history_index = 0  # track current position in history
-        self._history_count = 0  # track number of stored states
-        # instatiate Drawer class
+        self._history_index = 0  # Tracks the current state in the history
+        self._cache_current_state()  # Save the initial state
+
+        # Instantiate Drawer class
         self.draw = Drawer(self)
-        self.clear()
 
     @property
-    def canvas(self):
+    def canvas(self) -> NDArray:
+        """Returns the latest canvas state."""
         return self._canvas
 
     @property
-    def history(self):
-        return self._state_history[: self._history_count, ...]
+    def previous(self) -> Optional[NDArray]:
+        """Returns the previous canvas state in history if available."""
+        if self._history_index > 1:
+            return self._state_history[self._history_index - 2]
+        return None
 
-    @property
-    def previous_state(self):
-        if self._history_count > 0:
-            return self._state_history[self._history_index - 1]
+    def clear(self) -> None:
+        """Clears the canvas to the background color."""
+        self._canvas[:] = np.array(self.bg_color, dtype=np.uint8)
+        self._cache_current_state()
+
+    def revert(self) -> None:
+        """Reverts the canvas to the previous cached state."""
+        if self._history_index > 1:
+            self._history_index -= 1
+            self._canvas[:] = self._state_history[self._history_index - 1]
+
+    def _cache_current_state(self) -> None:
+        """Saves the current state of the canvas in history."""
+        # Ensure index is within bounds and maintain the correct behavior
+        if self._history_index < self._cache_size:
+            self._state_history[self._history_index] = self._canvas.copy()
+            self._history_index += 1
         else:
-            print("no previous state")
+            # Shift the history to accommodate new states if cache size exceeded
+            self._state_history[:-1] = self._state_history[1:]
+            self._state_history[-1] = self._canvas.copy()
 
-    def clear(self):
-        """Create a blank canvas with the specified background color"""
-        self._canvas = np.ones(self.resolution + (3,), np.uint8) * np.array(self.bg_color, np.uint8)
-        self._save_current_state()
-
-    def revert(self):
-        """revert canvas to the cache state"""
-        if self._history_count > 0:
-            self._history_index = (self._history_index - 1) % self._cache_size
-            self._history_count -= 1
-            self._canvas = self._state_history[self._history_index].copy()
-        else:
-            print("no previous state to revert to")
-
-    def _save_current_state(self):
-        """Save the current state of the canvas in history"""
-        self._state_history[self._history_index] = self._canvas.copy()
-        # increaste counter
-        self._history_index = (self._history_index + 1) % self._cache_size
-        if self._history_count < self._cache_size:
-            self._history_count += 1
+    def save(self, filename: str) -> None:
+        """Save the current canvas state to an image file."""
+        cv.imwrite(filename, self._canvas)
 
 
 class Drawer:
     def __init__(self, parent: Canvas) -> None:
         self.parent: Canvas = parent
 
+    @staticmethod
     def _cache_canvas_state(method: Callable) -> Callable:
-        """decorator to cache the state of the canvas before drawing"""
+        """Decorator to save the current state of the canvas after drawing operations."""
 
-        def wrapper(self, *args, **kwargs):
-            # save curreng state of canvas to _cache before drawing
-            result = method(self, *args, **kwargs)
-            self.parent._save_current_state()
-
+        def wrapper(self, *args, **kwargs) -> Any:
+            result = method(self, *args, **kwargs)  # Call the original drawing method
+            self.parent._cache_current_state()  # Save the current state of the canvas
             return result
 
         return wrapper
 
     @_cache_canvas_state
-    def line(self, pt1, pt2, color=(255, 255, 255), thickness=-1):
-        # Draw a line on the parent canvas
+    def line(self, pt1, pt2, color=(255, 255, 255), thickness=-1) -> None:
+        """Draws a line on the parent canvas."""
         cv.line(self.parent._canvas, pt1, pt2, color, thickness)
 
     @_cache_canvas_state
-    def rectangle(self, pt1, pt2, color=(0, 0, 0), thickness=-1):
-        # Draw a rectangle on the parent canvas
+    def rectangle(self, pt1, pt2, color=(0, 0, 0), thickness=-1) -> None:
+        """Draws a rectangle on the parent canvas."""
         cv.rectangle(self.parent._canvas, pt1, pt2, color, thickness)
 
     @_cache_canvas_state
-    def circle(self, center, radius, color=(0, 0, 0), thickness=-1):
-        # Draw a circle on the parent canvas
-        cv.circle(
-            self.parent._canvas,
-            center,
-            radius,
-            color,
-            thickness,
-        )
+    def circle(self, center, radius, color=(0, 0, 0), thickness=-1) -> None:
+        """Draws a circle on the parent canvas."""
+        cv.circle(self.parent._canvas, center, radius, color, thickness)
