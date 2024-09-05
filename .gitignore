@@ -1,6 +1,9 @@
 .envrc
 poetry.lock
 
+# image folder
+src/img/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
