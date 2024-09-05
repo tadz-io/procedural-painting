@@ -46,14 +46,14 @@ class SimulatedAnnealing:
                     x, y = x_new, y_new
                     break
             canvas.draw.circle(center=(x, y), radius=5)
-            # calculate current loss
-            current_loss = self.loss(canvas._cache, reference)
+            # calculate previous loss
+            previous_loss = self.loss(canvas.previous, reference)
             # calculate loss after drawing
             new_loss = self.loss(canvas.canvas, reference)
             # calculate new acceptance criteria
-            acceptance_criterion = np.exp((current_loss - new_loss) / self.current_temp)
-            # evaluate the new loss against the current lossş
-            if new_loss < current_loss or np.random.rand() < acceptance_criterion:
+            acceptance_criterion = np.exp((previous_loss - new_loss) / self.current_temp)
+            # evaluate the new loss against the previous loss
+            if new_loss < previous_loss or np.random.rand() < acceptance_criterion:
                 # accept the new state, we don't have to revert the state of the canvas
                 self._errors.append(new_loss)
             else:
