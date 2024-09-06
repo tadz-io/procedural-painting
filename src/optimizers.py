@@ -4,7 +4,7 @@ from src.draw import Canvas
 
 
 def mse(x, y):
-    return np.mean(np.sum((x - y) ** 2))
+    return np.mean((x - y) ** 2)
 
 
 class SimulatedAnnealing:
@@ -35,10 +35,8 @@ class SimulatedAnnealing:
         y = np.random.randint(0, canvas.resolution[0])
         # start iterating
         for i in range(self._max_iterations):
-            # TODO: implement a function that takes a step in the current neighbourhood
-            #      do not just assign random x, y coordinates
-            # add random step to coordinates, only if it does not exceed canvas dimensions
             while True:
+                x_old, y_old = x, y
                 x_new = x + self.sampler()
                 y_new = y + self.sampler()
                 # check if canvas bounds are not exceeded by random steps
@@ -50,15 +48,23 @@ class SimulatedAnnealing:
             previous_loss = self.loss(canvas.previous, reference)
             # calculate loss after drawing
             new_loss = self.loss(canvas.canvas, reference)
-            # calculate new acceptance criteria
-            acceptance_criterion = np.exp((previous_loss - new_loss) / self.current_temp)
-            # evaluate the new loss against the previous loss
-            if new_loss < previous_loss or np.random.rand() < acceptance_criterion:
-                # accept the new state, we don't have to revert the state of the canvas
-                self._errors.append(new_loss)
-            else:
-                # revert canvas to previous state
-                canvas.revert()
+            # calculate delta in loss
+            d_e = (new_loss - previous_loss) / 1
+            self._errors.append(d_e)
+            # Evaluate the new loss against the previous loss
+            if new_loss > previous_loss:
+                # calculate new acceptance criteria
+                acceptance_criterion = np.exp(-(d_e) / self.current_temp)
+                if np.random.rand() < acceptance_criterion:
+                    # Case 1: Accept new x and y but revert the canvas
+                    canvas.revert()
+                    canvas.draw.circle(center=(x, y), radius=5, color=(0, 0, 255))
+                    # Keep x and y as they are (x_new, y_new)
+                else:
+                    # Case 2: Revert both the canvas and the coordinates
+                    canvas.revert()
+                    # Revert x and y to the values before the random step
+                    x, y = x_old, y_old
             # cool down temperature
             self.current_temp *= self.cooling_rate
 
