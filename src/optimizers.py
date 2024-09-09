@@ -4,7 +4,9 @@ from src.draw import Canvas
 
 
 def mse(x, y):
-    return np.mean((x - y) ** 2)
+    x_uint16 = x.astype(np.uint16)
+    y_uint16 = y.astype(np.uint16)
+    return np.mean((x_uint16 - y_uint16) ** 2)
 
 
 class SimulatedAnnealing:
@@ -13,7 +15,7 @@ class SimulatedAnnealing:
         max_iterations: int,
         loss: Callable,
         initial_temp: int = 1000,
-        cooling_rate: float = 0.99,
+        cooling_rate: float = 0.999,
         sampler: Callable[..., int] = lambda: (np.random.binomial(100, 0.5, 1) - 50)[0],
         stop_criterion: float = 1e-3,
     ) -> None:
@@ -44,6 +46,7 @@ class SimulatedAnnealing:
         self._errors = []
         x = np.random.randint(0, canvas.resolution[1])
         y = np.random.randint(0, canvas.resolution[0])
+        color = np.random.randint(0, 256)
         # start iterating
         for i in range(self._max_iterations):
             while True:
@@ -54,7 +57,11 @@ class SimulatedAnnealing:
                 if (0 <= x_new <= canvas.resolution[1]) and (0 <= y_new <= canvas.resolution[0]):
                     x, y = x_new, y_new
                     break
-            canvas.draw.circle(center=(x, y), radius=5)
+            color_old = color
+            # take a random step along the color gradient
+            color = np.clip(color + np.random.randint(-5, 5, 1), 0, 255)[0]
+            color_tuple = (int(color),) * 3
+            canvas.draw.circle(center=(x, y), color=color_tuple, radius=5)
             # calculate previous loss
             previous_loss = self.loss(canvas.previous, reference)
             # update list with previous loss value
@@ -69,7 +76,6 @@ class SimulatedAnnealing:
             if new_loss > previous_loss:
                 # calculate new acceptance criteria
                 acceptance_criterion = np.exp(-(d_e) / self.current_temp)
-                self._entropy_norm.append(acceptance_criterion)
                 if np.random.rand() < acceptance_criterion:
                     # Case 1: Accept new x and y but revert the canvas
                     canvas.revert()
@@ -81,6 +87,9 @@ class SimulatedAnnealing:
                     # canvas.draw.circle(center=(x, y), radius=5, color=(255, 0, 0))
                     # Revert x and y to the values before the random step
                     x, y = x_old, y_old
+                    color = color_old
+                # add new entropy criterion to list
+                self._entropy_norm.append(acceptance_criterion)
             # cool down temperature
             self.current_temp *= self.cooling_rate
 
