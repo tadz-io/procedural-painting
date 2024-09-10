@@ -1,6 +1,6 @@
 import numpy as np
 from typing import Callable
-from src.draw import Canvas
+from draw import Canvas
 
 
 def mse(x, y):
