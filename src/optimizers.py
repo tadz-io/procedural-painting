@@ -43,7 +43,7 @@ class Parameter:
         if isinstance(self.value, int):
             if self.step_size != 0:
                 step = sampler(-self.step_size, self.step_size)
-                self.value = np.clip(self.value + step, self.min_value, self.max_value)
+                self.value = int(np.clip(self.value + step, self.min_value, self.max_value))
 
         # If the value is a tuple, handle as multiple parameters
         elif isinstance(self.value, tuple):
