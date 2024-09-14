@@ -14,11 +14,11 @@ class Canvas:
         )
         # Setup blank canvas
         self._state_history: NDArray = np.empty((cache_size, *resolution, 3), dtype=np.uint8)
-        self._history_index = 0  # Tracks the current state in the history
+        self._history_index: int = 0  # Tracks the current state in the history
         self._cache_current_state()  # Save the initial state
 
         # Instantiate Drawer class
-        self.draw = Drawer(self)
+        self.draw: Drawer = Drawer(self)
 
     @property
     def canvas(self) -> NDArray:
@@ -85,7 +85,6 @@ class Drawer:
         # Calculate half-width and half-height based on scale and ratio
         half_width = int(scale / 2)
         half_height = int(half_width * ratio)
-
         # Define the four corners of the rectangle before rotation
         corners = np.array(
             [
@@ -104,9 +103,9 @@ class Drawer:
         rotated_corners = np.dot(corners, rotation_matrix)
         # Translate the rotated corners to the rectangle's center
         rotated_corners += np.array(center)
-        # Reshape to (n, 1, 2) as required by cv2.polylines()
+        # Reshape to (n, 1, 2) as required by cv2.fillPoly
         rotated_corners = rotated_corners.reshape((-1, 1, 2)).astype(int)
-        # Draw the rotated rectangle using polylines
+        # Draw the rotated rectangle using fillPoly
         cv.fillPoly(self.parent._canvas, [rotated_corners], color=color)
 
     @_cache_canvas_state
