@@ -47,6 +47,7 @@ class SimulatedAnnealing:
         x = np.random.randint(0, canvas.resolution[1])
         y = np.random.randint(0, canvas.resolution[0])
         color = np.random.randint(0, 256)
+        angle = np.random.randint(0, 360)
         # start iterating
         for i in range(self._max_iterations):
             while True:
@@ -58,10 +59,14 @@ class SimulatedAnnealing:
                     x, y = x_new, y_new
                     break
             color_old = color
+            angle_old = angle
             # take a random step along the color gradient
-            color = np.clip(color + np.random.randint(-5, 5, 1), 0, 255)[0]
+            color = np.clip(color + np.random.randint(-50, 50, 1), 0, 255)[0]
+            angle = np.clip(angle + np.random.randint(-10, 10, 1), 0, 360)[0]
+            # calculate scale
+            scale = 200 * (2 / 200) ** (i / self._max_iterations)
             color_tuple = (int(color),) * 3
-            canvas.draw.circle(center=(x, y), color=color_tuple, radius=5)
+            canvas.draw.rectangle(center=(x, y), scale=scale, angle=angle, color=color_tuple)
             # calculate previous loss
             previous_loss = self.loss(canvas.previous, reference)
             # update list with previous loss value
@@ -88,8 +93,9 @@ class SimulatedAnnealing:
                     # Revert x and y to the values before the random step
                     x, y = x_old, y_old
                     color = color_old
+                    angle = angle_old
                 # add new entropy criterion to list
-                self._entropy_norm.append(acceptance_criterion)
+                self._entropy_norm.append(i)
             # cool down temperature
             self.current_temp *= self.cooling_rate
 
