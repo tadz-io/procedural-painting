@@ -80,9 +80,34 @@ class Drawer:
         cv.line(self.parent._canvas, pt1, pt2, color, thickness)
 
     @_cache_canvas_state
-    def rectangle(self, pt1, pt2, color=(0, 0, 0), thickness=-1) -> None:
+    def rectangle(self, center, scale, ratio=1.5, angle=0, color=(0, 0, 0)) -> None:
         """Draws a rectangle on the parent canvas."""
-        cv.rectangle(self.parent._canvas, pt1, pt2, color, thickness)
+        # Calculate half-width and half-height based on scale and ratio
+        half_width = int(scale / 2)
+        half_height = int(half_width * ratio)
+
+        # Define the four corners of the rectangle before rotation
+        corners = np.array(
+            [
+                [-half_width, -half_height],  # top-left
+                [half_width, -half_height],  # top-right
+                [half_width, half_height],  # bottom-right
+                [-half_width, half_height],  # bottom-left
+            ]
+        )
+        # Create the rotation matrix
+        theta = np.radians(angle)
+        rotation_matrix = np.array(
+            [[np.cos(theta), -np.sin(theta)], [np.sin(theta), np.cos(theta)]]
+        )
+        # Rotate each corner around the center
+        rotated_corners = np.dot(corners, rotation_matrix)
+        # Translate the rotated corners to the rectangle's center
+        rotated_corners += np.array(center)
+        # Reshape to (n, 1, 2) as required by cv2.polylines()
+        rotated_corners = rotated_corners.reshape((-1, 1, 2)).astype(int)
+        # Draw the rotated rectangle using polylines
+        cv.fillPoly(self.parent._canvas, [rotated_corners], color=color)
 
     @_cache_canvas_state
     def circle(self, center, radius, color=(0, 0, 0), thickness=-1) -> None:
