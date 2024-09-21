@@ -129,10 +129,10 @@ class SimulatedAnnealing:
                 # calculate new acceptance criteria
                 acceptance_criterion = np.exp(-d_e / self.current_temp)
                 if np.random.rand() < acceptance_criterion:
-                    # Case 1: Accept new x and y but revert the canvas
+                    # Case 1: Accept new parameters but revert the canvas
                     canvas.revert()
                 else:
-                    # Case 2: Revert both the canvas and the coordinates
+                    # Case 2: Revert both the canvas and the parameters
                     canvas.revert()
                     for k, param in parameters.items():
                         param.value = params_previous[k]
