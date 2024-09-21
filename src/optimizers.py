@@ -47,18 +47,20 @@ class Parameter:
 
         # If the value is a tuple, handle as multiple parameters
         elif isinstance(self.value, tuple):
+            # TODO: check if stepsize is 0, if so do not update
             # If step_size is an int, apply the same step to all elements in the tuple
             if isinstance(self.step_size, int):
                 step = sampler(-self.step_size, self.step_size)
                 self.value = tuple(
-                    np.clip(v + step, min_v, max_v)
+                    int(np.clip(v + step, min_v, max_v))
                     for v, min_v, max_v in zip(self.value, self.min_value, self.max_value)
                 )
 
             # If step_size is a tuple, generate a step for each element
             elif isinstance(self.step_size, tuple):
+                # TODO: check if stepsize is 0, if so do not update
                 self.value = tuple(
-                    np.clip(v + sampler(-s, s), min_v, max_v)
+                    int(np.clip(v + sampler(-s, s), min_v, max_v))
                     for v, s, min_v, max_v in zip(
                         self.value, self.step_size, self.min_value, self.max_value
                     )
